@@ -31,27 +31,38 @@ for algorithm discovery. Two unrelated domains, same workspace shape.
 
 ## Architecture (Phase F target)
 
-```
- ┌───────────────────────────────────────────┐
- │ CONTEXT (bounded, ~10K tokens)            │
- │  Question (fixed)                         │
- │  Tools (fixed schema)                     │
- │  Summary blocks: [s1][s2-5][s6-20]...     │  ← AgentFold partition
- │  Latest interaction: verbatim (e,a,o)     │
- │  [HINT: N steps left]                     │  ← MEM1
- └──────────────────┬────────────────────────┘
-                    │ model outputs, one message:
-                    │  <think>...</think>
-                    │  <fold>{"range":[k,t-1],"summary":...}</fold>
-                    │  <action>tool(args)</action>
-                    │  — or — <action>answer(...)</action>
- ┌──────────────────┴─────────┐
- │ web_search(queries[])      │  ← IterResearch batch schema
- │ visit(url, goal)           │  ← goal-conditioned (IterResearch)
- └────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph CTX["CONTEXT (bounded, ~10K tokens)"]
+        direction TB
+        Q["Question (fixed)"]
+        TS["Tool schemas (fixed)"]
+        BLOCKS["Summary blocks — ordered partition of past steps<br/>[s1][s2-5][s6-20] ...  ← AgentFold"]
+        LAST["Latest interaction — verbatim (e,a,o)"]
+        HINT["[HINT: N steps left]  ← MEM1"]
+    end
+
+    CTX -->|"rendered to prompt text at call time"| LLM["LLM<br/>glm-5.3-flash:cloud<br/>via ollama.chat"]
+
+    LLM --> OUT["One output message"]
+    subgraph OUT["tagged contract"]
+        direction TB
+        TH["&lt;think&gt; reasoning &lt;/think&gt;"]
+        FD["&lt;fold&gt; {range:[k,t-1], summary} &lt;/fold&gt;"]
+        AC["&lt;action&gt; tool(args) | answer(text) &lt;/action&gt;"]
+    end
+
+    FD -->|"retract blocks in [k,t-1],<br/>insert new summary block"| BLOCKS
+    FD -.->|"malformed JSON → no-op, counted"| EVALF["parse-failure counter"]
+
+    AC -->|search / visit| TOOLS["web_search(queries[]) ← IterResearch batch<br/>visit(url, goal) → bs4 + truncate"]
+    AC -->|answer| DONE["Final answer<br/>→ trace + eval"]
+
+    TOOLS -->|"observation (+ disk cache)"| LAST
 ```
 
 Baseline (Phase B) = same loop, zero folding: every step appended verbatim.
+To view: push to GitHub (renders natively) or VS Code with a Mermaid preview extension.
 
 ## Stack decisions (each forced by a paper)
 
