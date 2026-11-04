@@ -1,43 +1,43 @@
-# fold-agent — context-folding long-horizon research agent
+# fold-agent — plan
 
-> Flagship project from `ai-agent-project-roadmap.md` Phase 3.
-> Builds on AgentFold (arXiv:2510.24699), IterResearch (2511.07327), MEM1 (2506.15841) — engineering only, no training.
+> Flagship from `ai-agent-project-roadmap.md` Phase 3. Untrained, prompt-only
+> implementation of the context-folding paradigm (AgentFold mechanism +
+> IterResearch report + MEM1 eval). See DESIGN.md for the evidence behind
+> every decision.
 
-## Goal
+## Phases
 
-A web-research agent that completes 50–100+ step tasks while keeping its context
-under ~10K tokens — by **folding** history instead of appending it — proven with
-measured baselines and ablations.
+### Phase B — Baseline (naive ReAct, append-everything) — ~6h
+- [ ] 1. `llm.py` — `chat(messages) -> str` via `ollama.chat`, `MODEL` constant swap seam (~30 lines)
+- [ ] 2. `tools.py` — `web_search(queries: list[str])` batch (DDGS, top-k each) + `visit(url, goal)` (requests + bs4 + truncate); disk cache on both (`cache/`, keyed by hash); honest failure strings; "no results" ≠ "search failed" (~80 lines)
+- [ ] 3. `agent.py` — hand-rolled ReAct loop: Thought/Action/Observation appended verbatim; regex parse; parse failure → observation telling the model so; `max_steps`; **turns-left hint each step** (~110 lines) ← the loop lesson
+  - 📖 before typing: read **ReAct** (Yao 2022, ~9 pp) — this paper is the spec
+- [ ] 4. `run.py` — one question end-to-end, full trace to disk (steps, tokens per step)
+- [ ] 5. `eval.py` + `data/hotpot20.json` (HotpotQA dev slice, 20 questions) — EM + word-F1, peak context tokens (tiktoken, marked approx), steps, parse-failure count → baseline table in `eval.md`. Expect visible degradation >15 steps
+  - 📖 before writing eval.md: **IterResearch §3.1 + §4.5** (~4 pp)
 
-## Phases (the roadmap's weeks 5–8)
+### Phase F — Folding (AgentFold mechanism) — ~6h
+- [ ] 6. Output contract upgrade: `<think>/<fold>/<action>` tags; fold = one-line JSON `{"range":[k,t-1],"summary":"..."}`. Context becomes block list `[(start,end,text)]` (ordered partition), rendered per call
+- [ ] 7. Fold application: retract blocks intersecting [k,t-1], insert new block. Granular (k=t-1) + deep consolidation (k<t-1). Malformed fold → no-op, counted
+  - 📖 before typing: **AgentFold §3.2–3.5** (~5 pp) — you've now watched the baseline suffocate; it'll read differently
+- [ ] 8. Re-run eval vs baseline. Gate: same-or-better accuracy, peak tokens cut ≥3×, parse-failure rate <20% of steps. Iterate prompt (when to deep-consolidate: sub-investigation done or dead end)
 
-### Phase B — Baseline (naive, append-everything)
-- [ ] 1. `llm.py` — raw `ollama.chat` wrapper, no frameworks (~30 lines)
-- [ ] 2. `tools.py` — `web_search` (DDGS + disk cache), `visit(url, goal)` (requests + bs4), honest failure strings (~70 lines)
-- [ ] 3. `agent.py` — hand-rolled ReAct loop: Thought/Action/Observation cycle, append everything (~110 lines) ← the loop lesson
-- [ ] 4. `run.py` — one question end-to-end, trace to disk
-- [ ] 5. `eval.py` + 20 multi-hop questions (`data/hotpot20.json` from HotpotQA dev) → baseline table in `eval.md`: accuracy, peak tokens, steps. Expect failure >25 steps
+### Phase L — Long-horizon — ~5h
+- [ ] 9. Evolving report section (IterResearch): findings / open questions / next steps, rewritten by the model each step, riding in the output contract
+- [ ] 10. Multi-objective eval: 4–8 HotpotQA questions per task, semicolon-separated answers, per-answer EM (MEM1 §3.3). Budget 64 steps
+  - 📖 before typing: **MEM1 §3.1, §3.3, Algorithm 1** (~4 pp)
+- [ ] 11. Plots: peak-context-vs-steps + block-count-vs-steps (matplotlib). Flat-ish line = win
 
-### Phase F — Folding (the AgentFold mechanism)
-- [ ] 6. Fold directive in output contract: `{"fold_range": [k, t-1], "fold_summary": "..."}` before each action
-- [ ] 7. Context rewrite: retract summary blocks in range, replace with one; granular (last step) vs deep consolidation (whole sub-investigation)
-- [ ] 8. Re-run eval. Iterate prompt. Target: same/better accuracy, peak tokens cut 3–5×
-
-### Phase L — Long-horizon
-- [ ] 9. Evolving report section (IterResearch): findings/open questions/next steps, updated each step
-- [ ] 10. Multi-objective eval: 4–8 questions concatenated into one 50–100 step task
-- [ ] 11. Plot peak-context vs steps; flat-ish line = win
-
-### Phase P — Polish
-- [ ] 12. Ablations: no-fold vs granular-only vs full; README with architecture + benchmark table + example fold traces
+### Phase P — Polish — ~4h
+- [ ] 12. Ablations (no-fold vs granular-only vs full) + README: architecture, benchmark table, token plot, one annotated fold trace, the convergent-evolution note (AlphaEvolve)
 
 ## DoD
 
 1. Agent solves ≥1 multi-objective task the naive version cannot (context overflow)
-2. Peak context grows sub-linearly with steps
-3. `eval.md` with baseline vs folded tables + one plot
+2. Peak context grows sub-linearly with steps (plot proves it)
+3. `eval.md`: baseline vs folded tables + parse-failure accounting
 
 ## Working rule
 
-User types all logic (One Rule); AI designs, reviews, runs, writes docs/eval scaffolding.
-Stack: `glm-5.3-flash:cloud` via raw ollama chat · ddgs · requests/bs4 · tiktoken (approx counts, stated in eval) · no agent frameworks.
+User types all logic (One Rule). AI designs, reviews, runs, writes docs/eval.
+Readings are JIT — each paper arrives only when its code slot opens (~22 pp total).
