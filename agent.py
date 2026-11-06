@@ -8,7 +8,7 @@ import tiktoken
 from llm import chat
 from tools import visit, web_search
 
-MAX_STEPS = 20
+MAX_STEPS = 100
 ENCODING = tiktoken.get_encoding("cl100k_base") # approx counts, by design
 
 def count_tokens(text: str) -> int:
@@ -50,6 +50,8 @@ Rules:
 - Use Python literal arguments, not JSON objects.
 - Do not use Markdown code fences
 - Never invent search results or sources
+- answer() must contain ONLY the minimal answer phrase (a name, number,
+  or short entity) - no sentences, no explanation, no restating the question.
 - Use answer() when you have sufficient
 - If you cannot verify the answer, acknowledge the unvertainty.
 """

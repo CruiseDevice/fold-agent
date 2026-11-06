@@ -10,7 +10,7 @@ from pathlib import Path
 from agent import run
 
 DATA_PATH = Path(__file__).parent / "data" / "hotpot20.json"
-RESULTS_PATH = Path(__file__).parent / "results.json"
+RESULTS_PATH = Path(__file__).parent / "results_baseline.json"
 
 _ARTICLES = re.compile(r"\b(a|an|the)\b")
 _PUNCT = set(string.punctuation)
