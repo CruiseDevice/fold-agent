@@ -8,8 +8,8 @@
 ## Phases
 
 ### Phase B — Baseline (naive ReAct, append-everything) — ~6h
-- [ ] 1. `llm.py` — `chat(messages) -> str` via `ollama.chat`, `MODEL` constant swap seam (~30 lines)
-- [ ] 2. `tools.py` — `web_search(queries: list[str])` batch (DDGS, top-k each) + `visit(url, goal)` (requests + bs4 + truncate); disk cache on both (`cache/`, keyed by hash); honest failure strings; "no results" ≠ "search failed" (~80 lines)
+- [x] 1. `llm.py` — `chat(messages) -> str` via `ollama.chat`, `MODEL` constant swap seam (~30 lines)
+- [x] 2. `tools.py` — `web_search(queries: list[str])` batch (DDGS, top-k each) + `visit(url, goal)` (requests + bs4 + truncate); disk cache on both (`cache/`, keyed by hash); honest failure strings; "no results" ≠ "search failed" (~80 lines)
 - [ ] 3. `agent.py` — hand-rolled ReAct loop: Thought/Action/Observation appended verbatim; regex parse; parse failure → observation telling the model so; `max_steps`; **turns-left hint each step** (~110 lines) ← the loop lesson
   - 📖 before typing: read **ReAct** (Yao 2022, ~9 pp) — this paper is the spec
 - [ ] 4. `run.py` — one question end-to-end, full trace to disk (steps, tokens per step)
