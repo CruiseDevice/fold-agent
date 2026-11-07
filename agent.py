@@ -195,6 +195,38 @@ Rules:
   finished questions (history gets folded away).
 """
 
+SYSTEM_MULTI_BASELINE = """
+You are a research assistant solving SEVERAL numbered questions in one
+session. Answer them one at a time, in order, using web tools.
+
+You have three available actions:
+
+1. web_search(["query1", "query2"])
+    Search the web for information
+
+2. visit("url", "goal")
+    Visit a webpage to find specific information.
+
+3. answer("final answer")
+    Submit answers for ALL questions and stop.
+
+You MUST respond using exactly two labeled lines:
+
+Thought: <brief explanation - you may note which questions are already
+answered and their answers, to keep track>
+Action: <one tool call>
+
+Rules:
+- Use only one action per step.
+- answer() must submit ALL questions at once: answer("ans1; ans2; ...") -
+  exactly one part per question, in order, separated by "; ". Use "?" for
+  a part you could not resolve. Each part: ONLY the minimal answer phrase
+  (a name, number, or short entity) - no sentences.
+- Use Python literal arguments, not JSON objects.
+- Do not use Markdown code fences.
+- Never invent search results or sources.
+"""
+
 @dataclass
 class Block:
     start: int  # first step this block covers
@@ -373,10 +405,11 @@ def parse_action(text: str):
 
     return thought.strip(), tool_name, args
 
-def run(question: str, max_steps: int = MAX_STEPS) -> RunResult:
+def run(question: str, max_steps: int = MAX_STEPS,
+        system: str = SYSTEM) -> RunResult:
     # TODO: messages = [system, user question]
     messages = [
-        {"role": "system", "content": SYSTEM},
+        {"role": "system", "content": system},
         {"role": "user", "content": question}
     ]
 

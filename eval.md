@@ -97,3 +97,45 @@ the richer contract; all runs recovered. If Phase L pushes it over 20%, the
 fix candidates are: fewer worked examples of the fold format, or a
 FORMAT_ERROR observation that echoes the model's own malformed attempt.
 
+## Phase L — multi-objective exams (step 10)
+
+5 exams × 4 questions (all of hotpot20, consecutive grouping), one run per
+exam, budget 48 steps, semicolon answers scored per part (MEM1 protocol).
+Baseline arm = append-only ReAct with a multi-question prompt (Thought-line
+answer tracking allowed); folded arm = fold + evolving report. Same cache.
+Per-exam rows: `results_multi_baseline.json`, `results_multi_folded.json`.
+
+| metric | baseline | folded | delta |
+|---|---|---|---|
+| EM (per-part mean) | 0.50 | **0.60** | +10pp |
+| F1 (per-part mean) | 0.64 | **0.73** | +9pp |
+| avg steps | 5.8 | 6.8 | +1.0 |
+| avg peak tokens | 6,232 | **3,064** | **-51%** |
+| folds applied | - | 21/21 | zero no-ops |
+| FORMAT_ERRORs | 1 | 9 | **26% of steps — over gate** |
+
+### Finding 6 — DoD #1 met: exam1 is the showcase
+
+Exam1: baseline scored **0/4 exact** (F1 0.39) while drowning at **9,471
+peak tokens** — the append-only failure mode live: all four questions'
+search dumps in one context, answers scrambled. Folded scored **2/4 exact
+(F1 0.74) at 3,312 peak tokens** — a third of the context, double the
+accuracy. That is "solves a task the naive version cannot," and at 4
+questions the baseline already pays 2x the context of the 8-question-
+capable folded agent. The gap grows with N (AgentFold's curve, our scale).
+
+Exams 2/3/5 tie between arms (folded matched baseline answers at half the
+context — parity at less cost). Exam4 ties at 0.25: both arms miss the
+same two questions that the single-question eval also missed — question
+difficulty, not arm difference.
+
+### Finding 7 — format reliability is now the bottleneck
+
+Folded multi hit 9 FORMAT_ERRORs over 34 steps = 26%, over the 20% gate
+(predicted in Finding 5). Every failure recovered and all 21 folds parsed
+and applied cleanly — the FOLD json is fine; what breaks is the 4-section
+envelope. Before scaling N further: shrink SYSTEM_MULTI (two worked
+examples → one), and make the FORMAT_ERROR observation echo the model's
+own malformed output. Parse reliability, not memory, is the frontier.
+
+
