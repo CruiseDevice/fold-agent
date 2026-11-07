@@ -123,6 +123,78 @@ Rules:
 - If you cannot verify the answer, acknowledge the uncertainty.
 """
 
+SYSTEM_MULTI = """
+You are a research assistant solving SEVERAL numbered questions in one
+session. Answer them one at a time, in order. Solve each sub-question with
+web tools, record it in your report, then move to the next.
+
+You have three available actions:
+
+1. web_search(["query1", "query2"])
+    Search the web for information
+
+2. visit("url", "goal")
+    Visit a webpage to find specific information.
+
+3. answer("final answer")
+    Submit answers for ALL questions and stop.
+
+You MUST respond using exactly four tagged sections:
+
+<reasoning>
+What you know, what is still missing, and why this action comes next.
+</reasoning>
+<fold>
+{"range": [k, t-1], "summary": "one dense paragraph covering steps k..t-1"}
+</fold>
+<report>
+One line per question, always all of them:
+Q1: <answer> (done)   or   Q1: pending - <what is missing>
+</report>
+<action>one tool call</action>
+
+Example (3-question session, step 5):
+
+<reasoning>
+Q1 is answered (Istanbul). Q2 needs the shared profession of two writers;
+I have Mencken's page cached in history, now searching Camus.
+</reasoning>
+<fold>
+{"range": [2, 4], "summary": "Steps 2-4 established Q1: both landmarks are
+in Istanbul (done). Began Q2: Mencken was a journalist/editor; need Camus."}
+</fold>
+<report>
+Q1: Istanbul (done)
+Q2: pending - checking Camus's profession
+Q3: pending
+</report>
+<action>web_search(["Albert Camus profession journalist"])</action>
+
+Folding rules:
+- Your history is shown as blocks labeled [steps k-t]. Your fold REPLACES
+  every intersecting block with one new block containing your summary.
+- Fold EVERY turn (normally just the previous step).
+- DEEP-CONSOLIDATE each question's investigation once its answer is in the
+  report: compress that whole question's steps to 1-2 lines ("Q1: Istanbul,
+  confirmed via [source]") and discard the raw search noise.
+- Summaries must preserve facts you may still need: names, dates, numbers,
+  URLs, answers to sub-questions. Note dead ends in one line.
+- Omit <fold> only on your first turn.
+
+Answer format (submit ONLY when every question is answered or clearly
+stuck): answer("ans1; ans2; ans3") - exactly one part per question, in
+order, separated by "; ". Use "?" for a part you could not resolve.
+Each part: ONLY the minimal answer phrase - no sentences.
+
+Rules:
+- Use only one action per step.
+- Use Python literal arguments, not JSON objects.
+- Do not use Markdown code fences.
+- Never invent search results or sources.
+- Keep the report current every turn; it is your only durable memory of
+  finished questions (history gets folded away).
+"""
+
 @dataclass
 class Block:
     start: int  # first step this block covers
@@ -140,6 +212,7 @@ class Step:
     fold_applied: bool = False # False + fold set -> range rejected (no-op)
     fold_malformed: bool = False # <fold> tag present but unparseable/invalid
     raw: str = "" # verbatim model output (run_folded only; prompt-iteration aid)
+    report: str = "" # the evolving report as of this step ("" until first emitted)
 
 
 @dataclass
@@ -169,6 +242,7 @@ class RunResult:
 _REASON_RE = re.compile(r"<reasoning>(.*?)</reasoning>", re.DOTALL)
 _FOLD_RE = re.compile(r"<fold>(.*?)</fold>", re.DOTALL)
 _ACTION_RE = re.compile(r"<action>(.*?)</action>", re.DOTALL)
+_REPORT_RE = re.compile(r"<report>(.*?)</report>", re.DOTALL)
 _CALL_RE = re.compile(r"([a-zA-Z_]\w*)\((.*)\)", re.DOTALL)
 
 
@@ -244,6 +318,7 @@ def parse_output(text: str):
     think_match = _REASON_RE.search(text)
     fold_match = _FOLD_RE.search(text)
     action_match = _ACTION_RE.search(text)
+    report_match = _REPORT_RE.search(text)
 
     # Action is the only REQUIRED section.
     if not action_match:
@@ -255,6 +330,8 @@ def parse_output(text: str):
     if fold_match:
         fold = _parse_fold(fold_match.group(1))
 
+    report = report_match.group(1).strip() if report_match else ""
+
     # Action tag content parsed exactly like baseline: tool call + literals.
     call = _CALL_RE.search(action_match.group(1))
     if not call:
@@ -265,7 +342,7 @@ def parse_output(text: str):
     if args is None:
         return None
 
-    return think, fold, tool_name, args
+    return think, fold, tool_name, args, report
 
 def parse_action(text: str):
     """Return (thought, tool_name, args_list) or None if unparseable.
@@ -427,25 +504,31 @@ def apply_fold(blocks: list[Block], fold: dict, t: int):
 
 
 def render_messages(question: str, blocks: list[Block], hint: str,
-                    system: str = SYSTEM_FOLD) -> list[dict]:
-    """AgentFold shape: system / question / history-as-blocks / latest + hint.
-    Empty blocks (first step) -> no HISTORY section, just question + hint."""
+                    system: str = SYSTEM_FOLD, report: str = "") -> list[dict]:
+    """AgentFold shape: system / question / report / history-as-blocks / hint.
+    Empty blocks (first step) -> no HISTORY section. Empty report -> omitted
+    (single-question mode never needs one)."""
+    parts = [question]
+    if report:
+        parts.append("YOUR REPORT (rewrite it every turn; history gets folded away):\n" + report)
     if blocks:
         history = "\n\n".join(f"[steps {b.start}-{b.end}]\n{b.text}" for b in blocks)
-        user = question + "\n\nHISTORY:\n" + history + "\n\n" + hint
-    else:
-        user = question + "\n\n" + hint
+        parts.append("HISTORY:\n" + history)
+    parts.append(hint)
     return [
         {"role": "system", "content": system},
-        {"role": "user", "content": user},
+        {"role": "user", "content": "\n\n".join(parts)},
     ]
 
 
-def run_folded(question: str, max_steps: int = MAX_STEPS) -> RunResult:
-    """Phase F agent: same tools and loop shape as run(), but history lives
-    as an ordered partition of blocks; each turn the model may fold
-    (compress) part of its own history before acting."""
+def run_folded(question: str, max_steps: int = MAX_STEPS,
+               system: str = SYSTEM_FOLD) -> RunResult:
+    """Phase F/L agent: history lives as an ordered partition of blocks;
+    each turn the model may fold (compress) part of its own history, and
+    keeps an evolving <report> (multi-question memory, if the contract asks
+    for one)."""
     blocks: list[Block] = []
+    report = ""
     result = RunResult(question=question, answer="")
 
     for t in range(1, max_steps + 1):
@@ -454,7 +537,8 @@ def run_folded(question: str, max_steps: int = MAX_STEPS) -> RunResult:
             f"[HINT: step {t} of {max_steps}; "
             f"{max_steps - t} steps remain after this one]"
         )
-        messages = render_messages(question, blocks, hint)
+        messages = render_messages(question, blocks, hint, system=system,
+                                    report=report)
 
         prompt = "\n".join(
             f"{message['role']}: {message['content']}"
@@ -483,7 +567,9 @@ def run_folded(question: str, max_steps: int = MAX_STEPS) -> RunResult:
                 'answer("text")</action>'
             )
         else:
-            thought, fold, tool_name, args = parsed
+            thought, fold, tool_name, args, new_report = parsed
+            if new_report:
+                report = new_report
 
             action_match = _ACTION_RE.search(out)
             action = action_match.group(1).strip() if action_match else ""
@@ -542,6 +628,7 @@ def run_folded(question: str, max_steps: int = MAX_STEPS) -> RunResult:
                 fold_applied=fold_applied,
                 fold_malformed=fold is None and _FOLD_RE.search(out) is not None,
                 raw=out,
+                report=report,
             )
         )
 
@@ -552,27 +639,20 @@ def run_folded(question: str, max_steps: int = MAX_STEPS) -> RunResult:
 
 
 if __name__ == "__main__":
-    # smoke: one 2-hop HotpotQA-style question, folded agent
-    r = run_folded("What government position was held by the woman who portrated " \
-    "Jyn Erso in Rogue One?")
+    # smoke: 3-question multi-objective exam with the evolving report
+    exam = (
+        "Answer each question. 1. In what city are the Nusretiye Clock Tower "
+        "and the Eski Imaret Mosque? 2. What profession do H. L. Mencken and "
+        "Albert Camus have in common? 3. Who was the lead character in the "
+        "1960s sitcom Get Smart?"
+    )
+    r = run_folded(exam, max_steps=24, system=SYSTEM_MULTI)
 
-    print("QUESTION:", r.question)
-    print("ANSWER:", r.answer)
-
-    print("STEPS:", len(r.steps))
-    print("PEAK TOKENS:", r.peak_tokens)
-    print("PARSE FAILURES:", r.parse_failures)
-    print("FOLDS APPLIED:", r.folds_applied)
-    print("FOLD NO-OPS:", r.fold_noops)
-
-    for step in r.steps:
-        print(f"\n--- Step {step.n} ---")
-        print("Thought:", step.thought)
-        if step.fold is not None:
-            print("Fold:", step.fold["range"],
-                  "(applied)" if step.fold_applied else "(NO-OP)")
-        elif step.fold_malformed:
-            print("Fold: <malformed>")
-        print("Action:", step.action)
-        print("Observation:", step.observation)
-        print("Prompt tokens:", step.prompt_tokens)
+    print("EXAM:", exam)
+    print("\nANSWER:", r.answer)
+    print("steps:", len(r.steps), "| peak:", r.peak_tokens,
+          "| parse failures:", r.parse_failures,
+          "| folds applied:", r.folds_applied, "| no-ops:", r.fold_noops)
+    print("\nFINAL REPORT:\n" + (r.steps[-1].report if r.steps else "(none)"))
+    for s in r.steps:
+        print(f"{s.n:>2}. [{s.prompt_tokens:>5} tok] {s.action[:60]}")
