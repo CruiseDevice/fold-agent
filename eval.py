@@ -7,7 +7,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from agent import run
+from agent import run  # baseline arm; folded arm imports run_folded lazily
 
 DATA_PATH = Path(__file__).parent / "data" / "hotpot20.json"
 RESULTS_PATH = Path(__file__).parent / "results_baseline.json"
@@ -45,15 +45,23 @@ def word_f1(pred: str, gold: str) -> float:
     return 2 * precision * recall / (precision + recall)
 
 
-def evaluate(max_steps: int = 20, limit: int = 20) -> dict:
+def evaluate(max_steps: int = 20, limit: int = 20, arm: str = "baseline") -> dict:
     """Run the agent on each question; write per-question results JSON.
-    Resumable: skip ids already in RESULTS (crashes mid-run lose nothing).
+    Resumable: skip ids already in the results file (crashes lose nothing).
+    arm: "baseline" -> run(), results_baseline.json
+         "folded"   -> run_folded(), results_folded.json
     Returns aggregate summary over everything in the results file.
     """
+    if arm == "folded":
+        from agent import run_folded as agent_run
+        results_path = Path(__file__).parent / "results_folded.json"
+    else:
+        agent_run = run
+        results_path = RESULTS_PATH
     data = json.loads(DATA_PATH.read_text())[:limit]
     results = (
-        json.loads(RESULTS_PATH.read_text())
-        if RESULTS_PATH.exists()
+        json.loads(results_path.read_text())
+        if results_path.exists()
         else []
     )
     done = {row["id"] for row in results}
@@ -63,7 +71,7 @@ def evaluate(max_steps: int = 20, limit: int = 20) -> dict:
             continue
 
         t0 = time.time()
-        r = run(q["question"], max_steps)
+        r = agent_run(q["question"], max_steps)
 
         row = {
             "id": q["id"],
@@ -75,10 +83,12 @@ def evaluate(max_steps: int = 20, limit: int = 20) -> dict:
             "steps": len(r.steps),
             "peak_tokens": r.peak_tokens,
             "parse_failures": r.parse_failures,
+            "folds_applied": r.folds_applied,
+            "fold_noops": r.fold_noops,
             "elapsed_s": round(time.time() - t0, 1),
         }
         results.append(row)
-        RESULTS_PATH.write_text(json.dumps(results, indent=2))
+        results_path.write_text(json.dumps(results, indent=2))
 
         print(
             f"[{i}/{len(data)}] em={row['em']} f1={row['f1']:.2f} "
@@ -105,4 +115,5 @@ def evaluate(max_steps: int = 20, limit: int = 20) -> dict:
 
 
 if __name__ == "__main__":
-    evaluate()
+    import sys
+    evaluate(arm=sys.argv[1] if len(sys.argv) > 1 else "baseline")

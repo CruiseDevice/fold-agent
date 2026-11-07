@@ -54,3 +54,46 @@ contract gets the fold tag added.
 
 Phase F (folding) targets: EM ≥ 0.60, peak tokens ≤ ~900 avg (≥3x cut),
 parse-failure rate still <20% of steps.
+
+## Folded arm (Phase F, steps 6-8)
+
+Same 20 questions, same cache, max_steps=20. `run_folded()` + SYSTEM_FOLD
+(tagged contract, fold directive each turn). Per-question rows:
+`results_folded.json`.
+
+| metric | baseline | folded | delta |
+|---|---|---|---|
+| EM | 0.60 | **0.60** | held |
+| word-F1 | 0.70 | **0.71** | +0.01 |
+| avg steps | 3.5 | 3.8 | +0.3 |
+| avg peak tokens | 2,786 | **1,858** | **-33%** |
+| FORMAT_ERRORs (total steps) | 4 | 9 | watch |
+| FORMAT_ERROR rate (of 76 steps) | ~6% | ~12% | under 20% gate |
+
+Same-question agreement: 19/20 preds identical or near-identical to baseline
+(Q1 `Istanbul` both arms; Q15 slightly longer tail). The one flip: Q2
+(`a scholar`) folded got RIGHT (baseline missed). Q17 `Ghana` vs
+`Ghanaian national team` — folded answered tighter but EM-unequal.
+
+### Finding 4 — the ≥3x token gate was miscalibrated for this horizon
+
+Gate said ≤900 avg peak tokens. Folded achieved 1858 (-33%). Why the gate
+missed: these 2-hop questions finish in ~3.8 steps — history is only 1-2
+observations when the run ends, so there is almost nothing to compress.
+Folding's ceiling here is the fixed overhead (SYSTEM_FOLD prompt + question
++ current observation), which no context manager can shrink. AgentFold's
+92%-smaller-context claim is measured at turn 100, not turn 4.
+
+Where the 3x cut CAN appear: long horizons (30-64 steps) = Phase L
+multi-objective tasks, which is exactly the project DoD #1. The 2-hop eval
+remains the accuracy-parity check: folding held EM and F1 while active,
+with 33% less context — the mechanism does not hurt, which is the
+prerequisite for scaling it.
+
+### Finding 5 — the 3-tag contract costs format reliability
+
+FORMAT_ERRORs rose 4 → 9 (12% of steps, still under the 20% gate). Cost of
+the richer contract; all runs recovered. If Phase L pushes it over 20%, the
+fix candidates are: fewer worked examples of the fold format, or a
+FORMAT_ERROR observation that echoes the model's own malformed attempt.
+
