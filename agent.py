@@ -401,6 +401,7 @@ class Step:
     fold_malformed: bool = False # <fold> tag present but unparseable/invalid
     raw: str = "" # verbatim model output (run_folded only; prompt-iteration aid)
     report: str = "" # the evolving report as of this step ("" until first emitted)
+    workspace_after: list = field(default_factory=list) # block snapshot after this step (post-fold, post-append)
 
 
 @dataclass
@@ -818,6 +819,7 @@ def run_folded(question: str, max_steps: int = MAX_STEPS,
                 fold_malformed=fold is None and _FOLD_RE.search(out) is not None,
                 raw=out,
                 report=report,
+                workspace_after=[*blocks],
             )
         )
 
