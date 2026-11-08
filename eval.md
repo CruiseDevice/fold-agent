@@ -183,3 +183,38 @@ One worked example + an explicit tag checklist cut FORMAT_ERRORs from 9
 to 3 (8% of steps, under the 20% gate) while EM/F1 went UP (0.65/0.76).
 The two-example prompt was over-taught, not the contract. The echo-the-
 malformed-output fix was never needed - untested, named here for the record.
+
+## Phase H — step 13: 8-question exams (gates failed, honestly)
+
+2 exams × 8 fresh questions (16 new from the parquet, offset 125), 64-step
+budget. Pre-fix run kept as `results_multi8_fixed_v0.json`.
+
+| arm | EM | F1 | avg peak | steps | FORMAT_ERRs |
+|---|---|---|---|---|---|
+| baseline | 0.62 | 0.78 | 7,880 | 6.5 | 2 |
+| fixed v0 | 0.62 | 0.75 | 6,892 | 19.5 | 21 (54%!) |
+| fixed v1 (apostrophe fix) | 0.50 | 0.64 | **5,712** | 12.5 | 10 (40%) |
+
+### Finding 10 — the apostrophe thrash (found, fixed, halved the damage)
+
+18 of exam8a's 21 format errors were one loop: the model emitted
+`answer('... women's basketball ...')` — single quotes BECAUSE the string
+contains an apostrophe — and `literal_eval` rejected it, identically, every
+retry. Fix: outer-quote fallback in `_parse_args` + "use double quotes" in
+the prompt. Failures 21 → 10, steps 19.5 → 12.5. Validated.
+
+### Finding 11 — Finding 4's prediction did not materialize at 8q
+
+Gate said ≥2x token cut; measured 13-28%. Cause: the baseline didn't
+drown because it barely searched — 5-8 steps, answering mostly from prior
+knowledge (glm-5.3-flash knows these facts), so its context stayed ~8K.
+Folding's advantage only opens when the agent must actually accumulate
+search history. At 8q, baseline shortcutting beats folding on every
+metric. The 20-question run (step 14) is where shortcutting stops being
+possible and the recorded predictions get their test.
+
+### Open: format errors 40% — still 2x over gate
+
+The apostrophe class is closed; what remains is the model dropping tags at
+long contexts. The one untested candidate (Finding 5): FORMAT_ERROR
+observation echoing the model's own malformed output.

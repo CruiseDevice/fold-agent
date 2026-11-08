@@ -117,7 +117,8 @@ def evaluate(max_steps: int = 20, limit: int = 20, arm: str = "baseline") -> dic
 EXAMS_PATH = Path(__file__).parent / "data" / "hotpot_exams.json"
 
 
-def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5) -> dict:
+def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5,
+                   exams_path: str | None = None) -> dict:
     """Multi-objective exams (MEM1 protocol): one run per exam, N questions,
     semicolon answers, per-part EM/F1. Baseline arm = append-only ReAct with
     a multi-question prompt (no report, no folding - that IS the control).
@@ -138,9 +139,11 @@ def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5) -> 
         from agent import SYSTEM_MULTI_BASELINE
         agent_run = run
         system = SYSTEM_MULTI_BASELINE
-    results_path = Path(__file__).parent / f"results_multi_{arm}.json"
+    src = Path(exams_path) if exams_path else EXAMS_PATH
+    suffix = "" if src == EXAMS_PATH else src.stem.replace("hotpot_exams", "")
+    results_path = Path(__file__).parent / f"results_multi{suffix}_{arm}.json"
 
-    exams = json.loads(EXAMS_PATH.read_text())[:limit]
+    exams = json.loads(src.read_text())[:limit]
     results = (
         json.loads(results_path.read_text())
         if results_path.exists()
@@ -218,5 +221,9 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if args and args[0] == "multi":
         evaluate_multi(arm=args[1] if len(args) > 1 else "folded")
+    elif args and args[0] == "h8":
+        # Phase H step 13: 8-question exams, 64-step budget
+        evaluate_multi(arm=args[1] if len(args) > 1 else "fixed", max_steps=64,
+                       limit=2, exams_path=str(EXAMS_PATH.parent / "hotpot_exams8.json"))
     else:
         evaluate(arm=args[0] if args else "baseline")

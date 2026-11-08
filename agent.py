@@ -372,7 +372,8 @@ Folding rules:
 
 Answer format: answer("ans1; ans2; ans3") - one part per question, in order,
 separated by "; ", "?" for unresolved. Each part: ONLY the minimal answer
-phrase - no sentences.
+phrase - no sentences. Use double quotes for the whole argument (single
+quotes break on answers containing apostrophes).
 
 Rules:
 - Use only one action per step.
@@ -444,7 +445,12 @@ def _parse_args(tool_name: str, args_text: str):
         # Wrap arguments as a tuple of positional arguments.
         args = list(ast.literal_eval(f"({args_text},)"))
     except (ValueError, SyntaxError, TypeError):
-        return None
+        # model quoted a string containing the quote char, e.g.
+        # answer('...women's basketball...') - recover via outer-quote match
+        m = re.fullmatch(r"\s*(['\"])(.*)\1\s*", args_text, re.DOTALL)
+        if not m:
+            return None
+        args = [m.group(2)]
 
     if tool_name == "web_search":
         if (

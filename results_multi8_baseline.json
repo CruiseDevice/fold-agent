@@ -1,0 +1,104 @@
+[
+  {
+    "id": "exam8a",
+    "golds": [
+      "Richmond",
+      "The Late Late Show",
+      "Ghana",
+      "Daviesia",
+      "867",
+      "Julianne Moore",
+      "Boston",
+      "black"
+    ],
+    "pred_parts": [
+      "Richmond River",
+      "The Late Late Show",
+      "Ghana",
+      "Daviesia",
+      "867 feet",
+      "Julianne Moore",
+      "Boston",
+      "black"
+    ],
+    "em_parts": [
+      0,
+      1,
+      1,
+      1,
+      0,
+      1,
+      1,
+      1
+    ],
+    "f1_parts": [
+      0.6666666666666666,
+      1.0,
+      1.0,
+      1.0,
+      0.6666666666666666,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "em": 0.75,
+    "f1": 0.9166666666666666,
+    "steps": 5,
+    "peak_tokens": 5860,
+    "parse_failures": 1,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 99.9
+  },
+  {
+    "id": "exam8b",
+    "golds": [
+      "seventh generation",
+      "2007",
+      "Straits of Gibraltar",
+      "Transmetropolitan",
+      "The Seine Meets Paris",
+      "Brainerd Lakes Regional Airport",
+      "GNU GPLv3",
+      "Badfinger"
+    ],
+    "pred_parts": [
+      "fifth generation",
+      "2007",
+      "the Azores",
+      "Lazarus Churchyard",
+      "The Seine Meets Paris",
+      "Brainerd Lakes Regional Airport",
+      "GPLv3",
+      "Badfinger"
+    ],
+    "em_parts": [
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    "f1_parts": [
+      0.5,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.6666666666666666,
+      1.0
+    ],
+    "em": 0.5,
+    "f1": 0.6458333333333334,
+    "steps": 8,
+    "peak_tokens": 9900,
+    "parse_failures": 1,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 152.9
+  }
+]
