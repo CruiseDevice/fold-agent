@@ -139,3 +139,13 @@ examples → one), and make the FORMAT_ERROR observation echo the model's
 own malformed output. Parse reliability, not memory, is the frontier.
 
 
+
+## Plots (step 11)
+
+- `plots/context_curve.png` — exam1 context growth, both arms, fold markers;
+  official-run peaks as dashed lines. Baseline run-to-run variance is huge
+  (9,471 official vs 3,191 capture); folded stays 1.9-2.4K in both runs.
+- `plots/peak_accuracy.png` — official per-exam peaks (EM labeled) and the
+  accuracy summary across both settings.
+- `capture_exam.py` regenerates instrumented traces (`traces/`), `plots.py`
+  is offline-only.
