@@ -149,3 +149,37 @@ own malformed output. Parse reliability, not memory, is the frontier.
   accuracy summary across both settings.
 - `capture_exam.py` regenerates instrumented traces (`traces/`), `plots.py`
   is offline-only.
+
+## Phase P — ablations + format fix (step 12)
+
+Same 5 exams per arm. Arms: `report_only` (report, never folds),
+`fold_only` (folds, no report), `fixed` (full recipe, one worked example +
+format checklist — the Finding 7 fix). Rows: `results_multi_<arm>.json`.
+
+| arm | EM | F1 | avg peak tok | FORMAT_ERRs | folds |
+|---|---|---|---|---|---|
+| baseline (append-only) | 0.50 | 0.64 | 6,232 | 1 | - |
+| report_only | 0.60 | 0.69 | **6,675** | 3 | 0 |
+| fold_only | 0.65 | 0.76 | 4,323 | 5 | 16/20 |
+| full (fold+report) | 0.60 | 0.73 | **3,064** | 9 (26%) | 21/21 |
+| **fixed (full, 1-example)** | **0.65** | **0.76** | 3,227 | **3 (8%)** | 29/32 |
+
+### Finding 8 — attribution: report buys accuracy, folding buys context
+
+`report_only` matched full's EM (0.60) but peaked at 6,675 tokens - MORE
+than the no-report baseline. The score-card alone explains the accuracy
+gain and saves nothing. Every folding arm cut peak context 31-51%. So the
+two mechanisms divide cleanly: the report is the accuracy mechanism
+(+10pp EM over baseline), folding is the context mechanism (3.1-4.3K vs
+6.2-6.7K). Neither alone gives both; the package does.
+
+`fold_only` and `fixed` hit 0.65 EM vs full's 0.60 - a 2-question swing
+on n=5 exams, within noise; the honest claim is "all folding arms beat
+baseline, none lose to report_only."
+
+### Finding 9 — Finding 7's fix worked: 26% -> 8% format errors
+
+One worked example + an explicit tag checklist cut FORMAT_ERRORs from 9
+to 3 (8% of steps, under the 20% gate) while EM/F1 went UP (0.65/0.76).
+The two-example prompt was over-taught, not the contract. The echo-the-
+malformed-output fix was never needed - untested, named here for the record.

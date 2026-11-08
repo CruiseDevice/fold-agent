@@ -124,10 +124,20 @@ def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5) -> 
     Resumable per exam id, same as evaluate()."""
     if arm == "folded":
         from agent import SYSTEM_MULTI, run_folded as agent_run
+        system = SYSTEM_MULTI
+    elif arm == "report_only":
+        from agent import SYSTEM_REPORT_ONLY, run_folded as agent_run
+        system = SYSTEM_REPORT_ONLY
+    elif arm == "fold_only":
+        from agent import SYSTEM_FOLD_ONLY, run_folded as agent_run
+        system = SYSTEM_FOLD_ONLY
+    elif arm == "fixed":
+        from agent import SYSTEM_MULTI_V2, run_folded as agent_run
+        system = SYSTEM_MULTI_V2
     else:
         from agent import SYSTEM_MULTI_BASELINE
         agent_run = run
-        SYSTEM_MULTI = SYSTEM_MULTI_BASELINE  # same variable name for the call below
+        system = SYSTEM_MULTI_BASELINE
     results_path = Path(__file__).parent / f"results_multi_{arm}.json"
 
     exams = json.loads(EXAMS_PATH.read_text())[:limit]
@@ -149,7 +159,7 @@ def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5) -> 
         golds = [q["answer"] for q in exam["questions"]]
 
         t0 = time.time()
-        r = agent_run(prompt, max_steps, system=SYSTEM_MULTI)
+        r = agent_run(prompt, max_steps, system=system)
 
         parts = [p.strip() for p in r.answer.split(";")] if r.answer else []
         while len(parts) < len(golds):

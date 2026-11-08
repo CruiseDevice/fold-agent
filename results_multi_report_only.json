@@ -1,0 +1,177 @@
+[
+  {
+    "id": "exam1",
+    "golds": [
+      "Istanbul, Turkey",
+      "a scholar",
+      "journalist",
+      "the Big 12 Conference"
+    ],
+    "pred_parts": [
+      "Istanbul, Turkey",
+      "A Joseon scholar who begins writing erotic novels (Forbidden Quest, 2006)",
+      "Writer",
+      "Big 12 Conference"
+    ],
+    "em_parts": [
+      1,
+      0,
+      0,
+      1
+    ],
+    "f1_parts": [
+      1.0,
+      0.18181818181818182,
+      0.0,
+      1.0
+    ],
+    "em": 0.5,
+    "f1": 0.5454545454545454,
+    "steps": 6,
+    "peak_tokens": 7700,
+    "parse_failures": 1,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 66.5
+  },
+  {
+    "id": "exam2",
+    "golds": [
+      "12,272",
+      "Monsters vs. Aliens",
+      "1999",
+      "Maxwell Smart"
+    ],
+    "pred_parts": [
+      "12,272",
+      "My Dog Tulip",
+      "1999",
+      "Maxwell Smart"
+    ],
+    "em_parts": [
+      1,
+      0,
+      1,
+      1
+    ],
+    "f1_parts": [
+      1.0,
+      0.0,
+      1.0,
+      1.0
+    ],
+    "em": 0.75,
+    "f1": 0.75,
+    "steps": 5,
+    "peak_tokens": 6918,
+    "parse_failures": 0,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 40.2
+  },
+  {
+    "id": "exam3",
+    "golds": [
+      "Cymbidium",
+      "Elfman",
+      "My Father",
+      "Chuck Noll"
+    ],
+    "pred_parts": [
+      "Cymbidium",
+      "Danny Elfman",
+      "My Father",
+      "Chuck Noll"
+    ],
+    "em_parts": [
+      1,
+      0,
+      1,
+      1
+    ],
+    "f1_parts": [
+      1.0,
+      0.6666666666666666,
+      1.0,
+      1.0
+    ],
+    "em": 0.75,
+    "f1": 0.9166666666666666,
+    "steps": 5,
+    "peak_tokens": 5317,
+    "parse_failures": 0,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 37.2
+  },
+  {
+    "id": "exam4",
+    "golds": [
+      "New South Wales",
+      "Edward Lucky McKee",
+      "Nebraska Cornhuskers women's basketball",
+      "Sir Francis Nethersole"
+    ],
+    "pred_parts": [
+      "Melbourne",
+      "Chris O'Dea",
+      "Nebraska Cornhuskers women's basketball team",
+      "Sir Francis Nethersole"
+    ],
+    "em_parts": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "f1_parts": [
+      0.0,
+      0.0,
+      0.888888888888889,
+      1.0
+    ],
+    "em": 0.25,
+    "f1": 0.4722222222222222,
+    "steps": 7,
+    "peak_tokens": 9162,
+    "parse_failures": 1,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 123.6
+  },
+  {
+    "id": "exam5",
+    "golds": [
+      "Ghanaian national team",
+      "Ted",
+      "Wes Craven",
+      "Travelers"
+    ],
+    "pred_parts": [
+      "Ghana",
+      "Ted",
+      "Wes Craven",
+      "Travelers"
+    ],
+    "em_parts": [
+      0,
+      1,
+      1,
+      1
+    ],
+    "f1_parts": [
+      0.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "em": 0.75,
+    "f1": 0.75,
+    "steps": 6,
+    "peak_tokens": 4278,
+    "parse_failures": 1,
+    "folds_applied": 0,
+    "fold_noops": 0,
+    "elapsed_s": 70.0
+  }
+]
