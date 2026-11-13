@@ -140,7 +140,7 @@ def evaluate_multi(arm: str = "folded", max_steps: int = 48, limit: int = 5,
         agent_run = run
         system = SYSTEM_MULTI_BASELINE
     src = Path(exams_path) if exams_path else EXAMS_PATH
-    suffix = "" if src == EXAMS_PATH else src.stem.replace("hotpot_exams", "")
+    suffix = "" if src == EXAMS_PATH else src.stem.replace("hotpot_exams", "").replace("hotpot_exam", "")
     results_path = Path(__file__).parent / f"results_multi{suffix}_{arm}.json"
 
     exams = json.loads(src.read_text())[:limit]

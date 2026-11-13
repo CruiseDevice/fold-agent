@@ -97,4 +97,46 @@ ax2.grid(axis="y", alpha=0.3)
 
 fig.tight_layout()
 fig.savefig(PLOTS / "peak_accuracy.png", dpi=160)
-print("wrote plots/context_curve.png and plots/peak_accuracy.png")
+
+# ---- 3. Phase H: the 20-question stress run (money plot) ------------------
+fig, ax = plt.subplots(figsize=(7, 4.4))
+for arm, color in [("baseline", BLUE), ("folded", ORANGE)]:
+    t = load(f"traces/exam20_{arm}.json")
+    xs = [s["n"] for s in t["steps"]]
+    ys = [s["prompt_tokens"] for s in t["steps"]]
+    ax.plot(xs, ys, marker="o", color=color, label=f"{arm} (instrumented re-run)")
+    if arm == "folded":
+        fx = [s["n"] - 1 for s in t["steps"] if s["fold_applied"]]
+        fy = [y for s, y in zip(t["steps"], ys) if s["fold_applied"]]
+        ax.scatter(fx, fy, marker="v", s=60, color=color, zorder=5,
+                   label="fold applied")
+peaks = {a: load(f"results_multi20_{a}.json")[0]["peak_tokens"] for a in ("baseline", "folded")}
+for a, c in [("baseline", BLUE), ("folded", ORANGE)]:
+    ax.axhline(peaks[a], color=c, ls="--", lw=1, alpha=0.55)
+ax.text(21.2, peaks["baseline"] - 4200, f"official run peak: {peaks['baseline']:,}\n(gap to folded: 6.8x)",
+       color=BLUE, fontsize=9, ha="right")
+ax.text(21.2, peaks["folded"] + 800, f"official run peak: {peaks['folded']:,}",
+       color=DARK_ORANGE, fontsize=9, ha="right")
+ax.set_xlabel("step")
+ax.set_ylabel("prompt tokens (approx, cl100k)")
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{int(v):,}"))
+ax.set_title("Exam 20 — all 20 questions in one run: append-only vs folded")
+ax.legend(loc="center left", fontsize=8.5)
+ax.grid(alpha=0.3)
+fig.tight_layout()
+fig.savefig(PLOTS / "stress20.png", dpi=160)
+
+# ---- 4. Phase H: gap scales with forced search, not question count -------
+fig, ax = plt.subplots(figsize=(5.6, 3.8))
+sizes = ["4 questions", "8 questions", "20 questions"]
+gaps = [6232 / 3064, 7880 / 5712, 40529 / 5992]  # baseline peak / folded peak
+bars = ax.bar(sizes, gaps, color=ORANGE, width=0.55)
+for b, g in zip(bars, gaps):
+    ax.text(b.get_x() + b.get_width() / 2, g + 0.15, f"{g:.1f}x", ha="center", fontsize=10)
+ax.set_ylabel("baseline peak / folded peak")
+ax.set_title("Peak-context gap grows with task size\n(8-question run: baseline answered mostly from memory — Finding 12)", fontsize=9.5)
+ax.set_ylim(0, 8)
+ax.grid(axis="y", alpha=0.3)
+fig.tight_layout()
+fig.savefig(PLOTS / "gap_growth.png", dpi=160)
+print("wrote plots/stress20.png and plots/gap_growth.png")

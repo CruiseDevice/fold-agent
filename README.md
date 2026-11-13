@@ -71,6 +71,32 @@ python plots.py            # regenerate figures from committed results
 `DESIGN.md` has the paper analysis and 10 evidence-forced design decisions;
 `eval.md` has all 9 findings with honest caveats; `PLAN.md` is the build log.
 
+## Phase H — the 20-question stress run (post-publish)
+
+All 20 questions in ONE run, 100-step budget, predictions on record before
+running (`PLAN.md`):
+
+| arm | EM | F1 | steps | peak tokens | format errors |
+|---|---|---|---|---|---|
+| append-only baseline | 0.55 | 0.68 | 39 | **40,529** | 0 |
+| folded (fixed prompt) | 0.55 | **0.71** | **24** | **5,992** | 1 |
+
+**6.8x less context at equal accuracy.** The baseline prediction (>25K)
+landed at 40.5K; the folded prediction (<10K) landed at 6.0K with 22
+folds applied and zero malformed. The one refuted prediction: the baseline's
+accuracy did NOT collapse — it pays in tokens, not errors.
+
+Also from Phase H: an 8-question exam showed only a 1.4x gap — because the
+baseline answered mostly from prior knowledge and never accumulated search
+history (Finding 11). **The gap is a function of how much the task forces
+searching, not question count** (Finding 12). And the apostrophe bug: a
+single-quoted answer containing `women's` looped 18 identical format errors
+until a 2-line parser fix halved them (Finding 10) — small models quoting
+strings that contain their own delimiter is a real reliability class.
+
+New plots: `plots/stress20.png`, `plots/gap_growth.png`. Trace viewer:
+`python trace_view.py exam20 folded`.
+
 ## Honest caveats
 
 - n=5 exams (20 questions total): differences under ~15pp are noise; the
